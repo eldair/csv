@@ -59,7 +59,7 @@
     },
     "autoload": {
         "psr-4": {
-            "League\\Csv\\": "src"
+            "Eldair\\Csv\\": "src"
         },
         "files": [
             "src/functions_include.php"

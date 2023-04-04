@@ -1,6 +1,6 @@
 ---
 name: 🎉 New Feature
-about: You have implemented some neat idea that you want to make part of League\Csv? 🎩
+about: You have implemented some neat idea that you want to make part of Eldair\Csv? 🎩
 ---
 
 <!--
@@ -15,11 +15,10 @@ Pick the target branch according to these criteria:
 
 _(Fill in the relevant information below to help triage your issue.)_
 
-|    Q        |   A
-|------------ | ------
-| New Feature | yes/no
-| BC Break    | yes/no
-
+| Q           | A      |
+| ----------- | ------ |
+| New Feature | yes/no |
+| BC Break    | yes/no |
 
 ### Proposal
 
@@ -27,10 +26,10 @@ _(Please explain in plain english the feature you would like to see implemented.
 
 ## Checks before submitting
 
-* [ ] Be sure that there isn't already a pull request about this. See: [Pull requests](https://github.com/thephpleague/csv/pulls)
-* [ ] This pull request is about 1 new feature and nothing more.
-* [ ] Be sure to always target the lowest supported PHP version.
-* [ ] Be sure to include tests.
-* [ ] Be sure to have run `composer test` before submitting the fix.
-* [ ] Be sure to update the `CHANGELOG.md`
-* [ ] Be sure to update the documentation.
+-   [ ] Be sure that there isn't already a pull request about this. See: [Pull requests](https://github.com/thephpleague/csv/pulls)
+-   [ ] This pull request is about 1 new feature and nothing more.
+-   [ ] Be sure to always target the lowest supported PHP version.
+-   [ ] Be sure to include tests.
+-   [ ] Be sure to have run `composer test` before submitting the fix.
+-   [ ] Be sure to update the `CHANGELOG.md`
+-   [ ] Be sure to update the documentation.

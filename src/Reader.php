@@ -1,17 +1,8 @@
 <?php
 
-/**
- * League.Csv (https://csv.thephpleague.com)
- *
- * (c) Ignace Nyamagana Butera <nyamsprod@gmail.com>
- *
- * For the full copyright and license information, please view the LICENSE
- * file that was distributed with this source code.
- */
-
 declare(strict_types=1);
 
-namespace League\Csv;
+namespace Eldair\Csv;
 
 use CallbackFilterIterator;
 use Iterator;
@@ -44,7 +35,7 @@ class Reader extends AbstractCsv implements TabularDataReader, JsonSerializable
     /** @var array<string> header record. */
     protected array $header = [];
     /** @var ?callable */
-    protected ?callable $header_formatter;
+    protected $header_formatter;
 
     public static function createFromPath(string $path, string $open_mode = 'r', $context = null): static
     {

@@ -1,9 +1,9 @@
 <?php
 
 $header = <<<EOF
-League.Csv (https://csv.thephpleague.com)
+CSV
 
-(c) Ignace Nyamagana Butera <nyamsprod@gmail.com>
+(c)
 
 For the full copyright and license information, please view the LICENSE
 file that was distributed with this source code.
@@ -20,12 +20,12 @@ return $config
         '@PSR2' => true,
         'array_syntax' => ['syntax' => 'short'],
         'concat_space' => ['spacing' => 'none'],
-        'header_comment' => [
-            'comment_type' => 'PHPDoc',
-            'header' => $header,
-            'location' => 'after_open',
-            'separate' => 'both',
-        ],
+        // 'header_comment' => [
+        //     'comment_type' => 'PHPDoc',
+        //     'header' => $header,
+        //     'location' => 'after_open',
+        //     'separate' => 'both',
+        // ],
         'global_namespace_import' => [
             'import_classes' => true,
             'import_constants' => true,

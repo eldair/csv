@@ -4,7 +4,7 @@ require __DIR__ . '/src/functions_include.php';
 
 spl_autoload_register(static function (string $class_name): void {
 
-    $prefix = 'League\Csv\\';
+    $prefix = 'Eldair\Csv\\';
     if (!str_starts_with($class_name, $prefix)) {
         return;
     }

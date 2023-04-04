@@ -1,10 +1,5 @@
 # CSV
 
-[![Latest Version](https://img.shields.io/github/release/thephpleague/csv.svg?style=flat-square)](https://github.com/thephpleague/csv/releases)
-[![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE)
-[![Build](https://github.com/thephpleague/csv/workflows/build/badge.svg)](https://github.com/thephpleague/csv/actions?query=workflow%3A%22build%22)
-[![Total Downloads](https://img.shields.io/packagist/dt/league/csv.svg?style=flat-square)](https://packagist.org/packages/league/csv)
-
 Csv is a library to ease parsing, writing and filtering CSV in PHP.
 The library goal is to be powerful while remaining lightweight,
 by utilizing PHP native classes whenever possible.
@@ -14,14 +9,9 @@ by utilizing PHP native classes whenever possible.
 -   Easy to use API
 -   Read and Write to CSV documents in a memory efficient and scalable way
 -   Support PHP stream filtering capabilities
--   Transform CSV documents into popular format (JSON, XML or HTML)
 -   Fully documented
 -   Fully unit tested
 -   Framework-agnostic
-
-## Documentation
-
-Full documentation can be found at [csv.thephpleague.com](https://csv.thephpleague.com).
 
 ## System Requirements
 
@@ -31,23 +21,15 @@ Please find below the PHP support for `Csv` version 9.
 
 | Min. Library Version | Min. PHP Version | Max. Supported PHP Version |
 | -------------------- | ---------------- | -------------------------- |
-| 9.0.0                | PHP 7.0.10       | PHP 7.1.x                  |
-| 9.1.2                | PHP 7.0.10       | PHP 7.2.x                  |
-| 9.2.0                | PHP 7.0.10       | PHP 7.4.x                  |
-| 9.6.0                | PHP 7.2.5        | PHP 7.4.x                  |
-| 9.6.2                | PHP 7.2.5        | PHP 8.0.x                  |
-| 9.7.0                | PHP 7.3.0        | PHP 8.0.x                  |
-| 9.7.3                | PHP 7.3.0        | PHP 8.1.x                  |
-| 9.8.0                | PHP 7.4.0        | PHP 8.1.x                  |
 | 9.9.0                | PHP 8.1.2        | PHP 8.x                    |
 
-## Install
+<!-- ## Install
 
 Install `Csv` using Composer.
 
 ```bash
 composer require league/csv:^9.0
-```
+``` -->
 
 ## Configuration
 
