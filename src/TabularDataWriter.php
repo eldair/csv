@@ -28,5 +28,5 @@ interface TabularDataWriter
      * @throws CannotInsertRecord If the record can not be inserted
      * @throws Exception          If the record can not be inserted
      */
-    public function insertOne(array $record): int;
+    public function insertOne(array $record, bool $header): int;
 }

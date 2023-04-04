@@ -22,6 +22,19 @@ class Writer extends AbstractCsv implements TabularDataWriter
     protected int $flush_counter = 0;
     protected ?int $flush_threshold = null;
 
+    protected bool $auto_header = false;
+    protected bool $added_header = false;
+
+    /**
+     * Sets auto header to true.
+     */
+    public function withAutoHeader(): self
+    {
+        $this->auto_header = true;
+
+        return $this;
+    }
+
     /**
      * Returns the current newline sequence characters.
      */
@@ -67,11 +80,17 @@ class Writer extends AbstractCsv implements TabularDataWriter
      * @throws CannotInsertRecord If the record can not be inserted
      * @throws Exception          If the record can not be inserted
      */
-    public function insertOne(array $record): int
+    public function insertOne(array $record, bool $header = false): int
     {
         $record = array_reduce($this->formatters, fn (array $record, callable $formatter): array => $formatter($record), $record);
         $this->validateRecord($record);
         set_error_handler(fn (int $errno, string $errstr, string $errfile, int $errline) => true);
+
+        if (!$header && $this->auto_header && !$this->added_header) {
+            $this->insertOne(array_keys($record), true);
+            $this->added_header = true;
+        }
+
         $bytes = $this->document->fputcsv($record, $this->delimiter, $this->enclosure, $this->escape, $this->newline);
         restore_error_handler();
         if (false === $bytes) {

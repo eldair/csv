@@ -79,6 +79,24 @@ final class WriterTest extends TestCase
         self::assertStringContainsString('john,doe,john.doe@example.com', $this->csv->toString());
     }
 
+    public function testInsertWithAutoHeader(): void
+    {
+        $this->csv->withAutoHeader();
+        $expected = [
+            ['first_name' => 'john', 'last_name' => 'doe', 'email' => 'john.doe@example.com'],
+            ['first_name' => 'jane', 'last_name' => 'doe', 'email' => 'jane.doe@example.com'],
+        ];
+
+        foreach ($expected as $row) {
+            $this->csv->insertOne($row);
+        }
+
+        self::assertStringContainsString(
+            "first_name,last_name,email\njohn,doe,john.doe@example.com\njane,doe,jane.doe@example.com\n",
+            $this->csv->toString()
+        );
+    }
+
     public function testInsertNormalFile(): void
     {
         $csv = Writer::createFromPath(__DIR__.'/../test_files/foo.csv', 'a+');
