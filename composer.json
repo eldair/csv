@@ -1,16 +1,31 @@
 {
     "name": "league/csv",
     "type": "library",
-    "description" : "CSV data manipulation made easy in PHP",
-    "keywords": ["csv", "import", "export", "read", "write", "filter", "convert", "transform"],
+    "description": "CSV data manipulation made easy in PHP",
+    "keywords": [
+        "csv",
+        "import",
+        "export",
+        "read",
+        "write",
+        "filter",
+        "convert",
+        "transform"
+    ],
     "license": "MIT",
-    "homepage" : "https://csv.thephpleague.com",
+    "homepage": "https://csv.thephpleague.com",
     "authors": [
         {
-            "name" : "Ignace Nyamagana Butera",
-            "email" : "nyamsprod@gmail.com",
-            "homepage" : "https://github.com/nyamsprod/",
-            "role" : "Developer"
+            "name": "Kristijan Novaković",
+            "email": "kristijan.novakovic@outlook.com",
+            "homepage": "https://github.com/eldair/",
+            "role": "Developer"
+        },
+        {
+            "name": "Ignace Nyamagana Butera",
+            "email": "nyamsprod@gmail.com",
+            "homepage": "https://github.com/nyamsprod/",
+            "role": "Developer"
         }
     ],
     "support": {
@@ -26,9 +41,9 @@
         }
     ],
     "require": {
-        "php" : "^8.1.2",
-        "ext-json" : "*",
-        "ext-mbstring" : "*"
+        "php": "^8.1.2",
+        "ext-json": "*",
+        "ext-mbstring": "*"
     },
     "require-dev": {
         "ext-dom": "*",
@@ -46,7 +61,9 @@
         "psr-4": {
             "League\\Csv\\": "src"
         },
-        "files": ["src/functions_include.php"]
+        "files": [
+            "src/functions_include.php"
+        ]
     },
     "scripts": {
         "benchmark": "phpbench run src --report=default",
@@ -68,8 +85,8 @@
         "test": "Runs full test suite"
     },
     "suggest": {
-        "ext-iconv" : "Needed to ease transcoding CSV using iconv stream filters",
-        "ext-dom" : "Required to use the XMLConverter and the HTMLConverter classes"
+        "ext-iconv": "Needed to ease transcoding CSV using iconv stream filters",
+        "ext-dom": "Required to use the XMLConverter and the HTMLConverter classes"
     },
     "extra": {
         "branch-alias": {
