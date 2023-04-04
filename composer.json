@@ -13,7 +13,6 @@
         "transform"
     ],
     "license": "MIT",
-    "homepage": "https://csv.thephpleague.com",
     "authors": [
         {
             "name": "Kristijan Novaković",
@@ -28,18 +27,6 @@
             "role": "Developer"
         }
     ],
-    "support": {
-        "docs": "https://csv.thephpleague.com",
-        "issues": "https://github.com/thephpleague/csv/issues",
-        "rss": "https://github.com/thephpleague/csv/releases.atom",
-        "source": "https://github.com/thephpleague/csv"
-    },
-    "funding": [
-        {
-            "type": "github",
-            "url": "https://github.com/sponsors/nyamsprod"
-        }
-    ],
     "require": {
         "php": "^8.1.2",
         "ext-json": "*",
@@ -47,7 +34,6 @@
     },
     "require-dev": {
         "ext-dom": "*",
-        "doctrine/collections": "^2.1.2",
         "friendsofphp/php-cs-fixer": "^v3.14.3",
         "phpbench/phpbench": "^1.2.10",
         "phpstan/phpstan": "^1.10.10",
@@ -87,11 +73,6 @@
     "suggest": {
         "ext-iconv": "Needed to ease transcoding CSV using iconv stream filters",
         "ext-dom": "Required to use the XMLConverter and the HTMLConverter classes"
-    },
-    "extra": {
-        "branch-alias": {
-            "dev-master": "9.x-dev"
-        }
     },
     "config": {
         "sort-packages": true
