@@ -43,6 +43,8 @@ class Reader extends AbstractCsv implements TabularDataReader, JsonSerializable
     protected bool $is_empty_records_included = false;
     /** @var array<string> header record. */
     protected array $header = [];
+    /** @var ?callable */
+    protected ?callable $header_formatter;
 
     public static function createFromPath(string $path, string $open_mode = 'r', $context = null): static
     {
@@ -247,6 +249,9 @@ class Reader extends AbstractCsv implements TabularDataReader, JsonSerializable
     public function getRecords(array $header = []): Iterator
     {
         $header = $this->computeHeader($header);
+        if (null !== $this->header_formatter && [] !== $header) {
+            $header = ($this->header_formatter)($header);
+        }
 
         $normalized = fn ($record): bool => is_array($record) && ($this->is_empty_records_included || $record !== [null]);
 
@@ -268,6 +273,16 @@ class Reader extends AbstractCsv implements TabularDataReader, JsonSerializable
         }
 
         return $this->combineHeader($records, $header);
+    }
+
+    /**
+     * Adds a record formatter.
+     */
+    public function setHeaderFormatter(?callable $formatter): self
+    {
+        $this->header_formatter = $formatter;
+
+        return $this;
     }
 
     /**

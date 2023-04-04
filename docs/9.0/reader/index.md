@@ -50,8 +50,8 @@ $header = $csv->getHeader(); //returns ['First Name', 'Last Name', 'E-mail']
 
 If no header offset is set:
 
-- `Reader::getHeader` method will return an empty array.
-- `Reader::getHeaderOffset` will return `null`.
+-   `Reader::getHeader` method will return an empty array.
+-   `Reader::getHeaderOffset` will return `null`.
 
 <p class="message-info">By default no header offset is set.</p>
 
@@ -211,12 +211,12 @@ foreach ($reader as $offset => $record) {
 
 The returned records are normalized using the following rules:
 
-- [Stream filters](/9.0/connections/filters/) are applied if present.
-- Empty records are skipped if present.
-- The document BOM sequence is skipped if present.
-- If a header record was provided, the number of fields is normalized to the number of fields contained in that record:
-  - Extra fields are truncated.
-  - Missing fields are added with a `null` value.
+-   [Stream filters](/9.0/connections/filters/) are applied if present.
+-   Empty records are skipped if present.
+-   The document BOM sequence is skipped if present.
+-   If a header record was provided, the number of fields is normalized to the number of fields contained in that record:
+    -   Extra fields are truncated.
+    -   Missing fields are added with a `null` value.
 
 ```php
 use League\Csv\Reader;
@@ -247,10 +247,10 @@ Reader::includeEmptyRecords(): self;
 Reader::isEmptyRecordsIncluded(): bool;
 ```
 
-- Calling `Reader::includeEmptyRecords` will ensure empty records are left in the `Iterator` returned by `Reader::getRecords`,
-conversely `Reader::skipEmptyRecords` will ensure empty records are skipped.
-- At any given time you can ask your Reader instance if empty records will be stripped or included using the `Reader::isEmptyRecordsIncluded` method.
-- If no header offset is specified, the empty record will be represented by an empty `array`. Conversely, for consistency, an empty record will be represented by an array filled with `null` values as expected from header presence normalization.
+-   Calling `Reader::includeEmptyRecords` will ensure empty records are left in the `Iterator` returned by `Reader::getRecords`,
+    conversely `Reader::skipEmptyRecords` will ensure empty records are skipped.
+-   At any given time you can ask your Reader instance if empty records will be stripped or included using the `Reader::isEmptyRecordsIncluded` method.
+-   If no header offset is specified, the empty record will be represented by an empty `array`. Conversely, for consistency, an empty record will be represented by an array filled with `null` values as expected from header presence normalization.
 
 <p class="message-notice">The record offset is always independent of the presence of empty records.</p>
 
@@ -382,6 +382,34 @@ $stmt = (new Statement())
 
 $records = $stmt->process($reader);
 //$records is a League\Csv\ResultSet object
+```
+
+#### Adding a Header Formatter to a Reader object
+
+You can attach a single header formatter to the `Reader` class using the `Reader::addHeaderFormatter` method.
+If present and if there's an actual header it will get formatter according to the formatter rules.
+
+```php
+use League\Csv\Reader;
+
+$formatter = fn (array $row): array => array_map('strtoupper', $row);
+$text = <<<CSV
+column 1,column 2,column 3
+cell11,cell12,cell13
+CSV;
+$csv = Reader::createFromString($text);
+$csv->setHeaderOffset(0);
+$csv->addHeaderFormatter($formatter);
+
+var_dump(iterator_to_array($csv, true));
+//will display something like
+// [
+//          1 => [
+//              'COLUMN 1' => 'cell11',
+//              'COLUMN 2' => 'cell12',
+//              'COLUMN 3' => 'cell13',
+//          ],
+//      ]
 ```
 
 ## Records conversion

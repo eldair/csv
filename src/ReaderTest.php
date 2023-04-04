@@ -531,4 +531,22 @@ CSV;
         $this->expectException(Exception::class);
         $csv->getHeader();
     }
+
+    public function testSetHeaderFormatterRules(): void
+    {
+        $text = <<<CSV
+column 1,column 2,column 3
+cell11,cell12,cell13
+CSV;
+        $csv = Reader::createFromString($text);
+        $csv->setHeaderOffset(0);
+        $csv->setHeaderFormatter(fn (array $row): array => array_map('strtoupper', $row));
+        self::assertSame([
+            1 => [
+                'COLUMN 1' => 'cell11',
+                'COLUMN 2' => 'cell12',
+                'COLUMN 3' => 'cell13',
+            ],
+        ], iterator_to_array($csv, true));
+    }
 }
