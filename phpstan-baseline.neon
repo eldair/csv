@@ -1,0 +1,32 @@
+parameters:
+	ignoreErrors:
+		-
+			message: """
+				#^Class Eldair\\\\Csv\\\\AbstractCsv implements deprecated interface Eldair\\\\Csv\\\\ByteSequence\\:
+				since version 9\\.16\\.0$#
+			"""
+			count: 1
+			path: src/AbstractCsv.php
+
+		-
+			message: """
+				#^Class Eldair\\\\Csv\\\\Info implements deprecated interface Eldair\\\\Csv\\\\ByteSequence\\:
+				since version 9\\.16\\.0$#
+			"""
+			count: 1
+			path: src/Info.php
+
+		-
+			message: "#^Call to function is_int\\(\\) with string will always evaluate to false\\.$#"
+			count: 1
+			path: src/Serializer/Denormalizer.php
+
+		-
+			message: "#^Parameter \\#2 \\$length of function fread expects int\\<1, max\\>, int\\<0, max\\> given\\.$#"
+			count: 1
+			path: src/Stream.php
+
+		-
+			message: "#^Parameter \\#2 \\$length of function fread expects int\\<1, max\\>, int\\<0, max\\> given\\.$#"
+			count: 1
+			path: src/StreamTest.php
