@@ -10,6 +10,7 @@ use OutOfRangeException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
+
 use function explode;
 use function implode;
 use function mb_convert_encoding;
@@ -205,7 +206,7 @@ end']],
     public static function providesBOMSequences(): iterable
     {
         yield 'BOM UTF-8' => [
-            'sequence' => ByteSequence::BOM_UTF8,
+            'sequence' => Bom::Utf8->value,
         ];
     }
 }

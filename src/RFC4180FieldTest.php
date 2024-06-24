@@ -9,7 +9,9 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use TypeError;
+
 use function stream_get_filters;
+
 use const STREAM_FILTER_ALL;
 use const STREAM_FILTER_READ;
 
@@ -43,9 +45,9 @@ final class RFC4180FieldTest extends TestCase
         $csv = Writer::createFromPath('php://temp');
         RFC4180Field::addTo($csv);
         self::assertContains(RFC4180Field::getFiltername(), stream_get_filters());
-        $csv->setNewline("\r\n");
+        $csv->setEndOfLine("\r\n");
         $csv->insertOne($record);
-        self::assertSame($expected, $csv->getContent());
+        self::assertSame($expected, $csv->toString());
     }
 
     public static function bugsProvider(): array

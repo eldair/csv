@@ -16,7 +16,7 @@ final class EscapeFormulaTest extends TestCase
     public function testConstructorThrowsTypError(): void
     {
         $this->expectException(TypeError::class);
-        new EscapeFormula("\t", [(object) 'i']);
+        new EscapeFormula("\t", [(object) 'i']); /* @phpstan-ignore-line */
     }
 
     public function testConstructorThrowsInvalidArgumentException(): void
@@ -57,5 +57,38 @@ final class EscapeFormulaTest extends TestCase
         $csv->addFormatter(new EscapeFormula());
         $csv->insertOne($record);
         self::assertStringContainsString($expected, $csv->toString());
+    }
+
+    public function testUnescapeRecord(): void
+    {
+        $expected = ['2', '2017-07-25', 'Important Client', '=2+5', 240, null, (object) 'yes'];
+        $record = ['2', '2017-07-25', 'Important Client', "'=2+5", 240, null, (object) 'yes'];
+        $formatter = new EscapeFormula();
+        self::assertEquals($expected, $formatter->unescapeRecord($record));
+    }
+
+    public function testFormatterOnReader(): void
+    {
+        $escaoeFormula = new EscapeFormula();
+        $record = ['2', '2017-07-25', 'Important Client', '=2+5', '240', "\ttab", "\rcr", ''];
+        $csv = Writer::createFromString();
+        $csv->addFormatter($escaoeFormula->escapeRecord(...));
+        $csv->insertOne($record);
+
+        $reader = Reader::createFromString($csv->toString());
+        self::assertNotEquals($record, $reader->first());
+
+        $reader->addFormatter($escaoeFormula->unescapeRecord(...));
+        self::assertSame($record, $reader->first());
+    }
+
+    public function testUnformatReader(): void
+    {
+        $formatter = new EscapeFormula();
+        $input = "2,2017-07-25,\"Important Client\",\"'=2+5\",\"240\",\"'\ttab\",\"'\rcr\",\n";
+        $reader = Reader::createFromString($input)->setEnclosure('"');
+        $result = array_map($formatter->unescapeRecord(...), iterator_to_array($reader));
+        $formatted_records = [['2', '2017-07-25', 'Important Client', '=2+5', '240', "\ttab", "\rcr", '']];
+        self::assertEquals($formatted_records, $result);
     }
 }

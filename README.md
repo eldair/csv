@@ -15,7 +15,7 @@ by utilizing PHP native classes whenever possible.
 
 ## System Requirements
 
-You need the `mbstring` extension to use `Csv` and the latest stable version of PHP is recommended.
+You need the `ext-filter` extension to use `Csv` and the latest stable version of PHP is recommended.
 
 Please find below the PHP support for `Csv` version 9.
 
@@ -33,14 +33,17 @@ composer require league/csv:^9.0
 
 ## Configuration
 
-**Warning:** If your CSV document was created or is read on a Macintosh computer, add the following lines before
-using the library to help [PHP detect line ending](http://php.net/manual/en/function.fgetcsv.php#refsect1-function.fgetcsv-returnvalues).
+> [!TIP]
+> If your CSV document was created or is read on a **Legacy Macintosh computer**, add the following lines before
+> using the library to help [PHP detect line ending](http://php.net/manual/en/function.fgetcsv.php#refsect1-function.fgetcsv-returnvalues).
 
 ```php
 if (!ini_get('auto_detect_line_endings')) {
     ini_set('auto_detect_line_endings', '1');
 }
 ```
+
+> [!WARNING] > **The ini setting is deprecated since PHP version 8.1 and will be removed in PHP 9.0**
 
 ## Testing
 

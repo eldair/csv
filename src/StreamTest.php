@@ -9,6 +9,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use SplFileObject;
 use TypeError;
+
 use function feof;
 use function fopen;
 use function fputcsv;
@@ -22,6 +23,7 @@ use function stream_context_get_options;
 use function stream_get_wrappers;
 use function stream_wrapper_register;
 use function stream_wrapper_unregister;
+
 use const STREAM_FILTER_READ;
 
 #[Group('csv')]
@@ -194,6 +196,23 @@ final class StreamTest extends TestCase
         $stream = Stream::createFromPath('php://temp', 'r+');
         $stream->appendFilter($filtername, STREAM_FILTER_READ);
     }
+
+    public function testIterateOverLines(): void
+    {
+        $text = <<<TEXT
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+Duis nec sapien felis, ac sodales nisl.
+Nulla vitae magna vitae purus aliquet consequat.
+TEXT;
+        $newText = '';
+        $file = Stream::createFromString($text);
+        $file->setMaxLineLen(20);
+        foreach ($file as $line) {
+            $newText .= $line."\n";
+        }
+        self::assertStringContainsString('Lorem ipsum dolor s', $newText);
+        self::assertSame(20, $file->getMaxLineLen());
+    }
 }
 
 final class StreamWrapper
@@ -217,7 +236,7 @@ final class StreamWrapper
         }
     }
 
-    public function stream_open(string $path, string $mode, int $options, string &$opened_path = null): bool
+    public function stream_open(string $path, string $mode, int $options, ?string &$opened_path = null): bool
     {
         $options = stream_context_get_options($this->context);
         if (!isset($options[self::PROTOCOL]['stream'])) {

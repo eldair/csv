@@ -7,6 +7,7 @@ namespace Eldair\Csv;
 use ArrayIterator;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
+
 use function array_map;
 
 #[Group('csv')]

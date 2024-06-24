@@ -10,6 +10,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use SplFileObject;
 use SplTempFileObject;
+
 use function array_map;
 use function fclose;
 use function fopen;
@@ -167,11 +168,36 @@ final class WriterTest extends TestCase
         /** @var resource $resource */
         $resource = tmpfile();
         $csv = Writer::createFromStream($resource);
-        self::assertSame("\n", $csv->getNewline());
-        $csv->setNewline("\r\n");
+        self::assertSame("\n", $csv->getEndOfLine());
+        $csv->setEndOfLine("\r\n");
         $csv->insertOne(['jane', 'doe']);
         self::assertSame("jane,doe\r\n", $csv->toString());
         $csv = null;
+    }
+
+    public function testForceEnclosure(): void
+    {
+        $collection = [
+            [1, 2],
+            ['value 2-0', 'value 2-1'],
+            ['to"to', 'foo\"bar'],
+        ];
+
+        $writer = Writer::createFromString();
+        self::assertFalse($writer->encloseAll());
+
+        $writer->forceEnclosure();
+        self::assertTrue($writer->encloseAll());
+
+        $writer->insertAll($collection);
+        $csv = $writer->toString();
+
+        self::assertStringContainsString('"1","2"'."\n", $csv);
+        self::assertStringContainsString('"value 2-0","value 2-1"'."\n", $csv);
+        self::assertStringContainsString('"to""to","foo\"bar"'."\n", $csv);
+
+        $writer->relaxEnclosure();
+        self::assertFalse($writer->encloseAll());
     }
 
     public function testAddValidationRules(): void
@@ -192,7 +218,7 @@ final class WriterTest extends TestCase
     {
         $this->expectException(UnavailableStream::class);
         $writer = Writer::createFromPath('php://null', 'w');
-        $writer->setNewline("\r\n");
+        $writer->setEndOfLine("\r\n");
         $writer->insertOne(['foo', 'bar']);
     }
 
@@ -206,7 +232,7 @@ final class WriterTest extends TestCase
     {
         foreach (["\r\n", "\n", "\r"] as $eol) {
             $csv = Writer::createFromString();
-            $csv->setNewline($eol);
+            $csv->setEndOfLine($eol);
             $csv->setEscape('');
             $csv->insertOne($record);
             self::assertSame($expected.$eol, $csv->toString());
@@ -257,5 +283,35 @@ final class WriterTest extends TestCase
                 'record' => ['a', 'foo bar', "multiline\r\nfield", 'bar'],
             ],
         ];
+    }
+
+    public function testEncloseAll(): void
+    {
+        /**
+         * @see https://en.wikipedia.org/wiki/Comma-separated_values#Example
+         */
+        $records = [
+            ['Year', 'Make', 'Model', 'Description', 'Price'],
+            [1997, 'Ford', 'E350', 'ac,abs,moon', '3000.00'],
+            [1999, 'Chevy', 'Venture "Extended Edition"', null, '4900.00'],
+            [1999, 'Chevy', 'Venture "Extended Edition, Very Large"', null, '5000.00'],
+            [1996, 'Jeep', 'Grand Cherokee', 'MUST SELL!
+            air, moon roof, loaded', '4799.00'],
+        ];
+
+        $csv = Writer::createFromString();
+        $csv->setDelimiter('|');
+        $csv->forceEnclosure();
+        $csv->insertAll($records);
+
+        $expected = <<<CSV
+"Year"|"Make"|"Model"|"Description"|"Price"
+"1997"|"Ford"|"E350"|"ac,abs,moon"|"3000.00"
+"1999"|"Chevy"|"Venture ""Extended Edition"""|""|"4900.00"
+"1999"|"Chevy"|"Venture ""Extended Edition, Very Large"""|""|"5000.00"
+"1996"|"Jeep"|"Grand Cherokee"|"MUST SELL!
+            air, moon roof, loaded"|"4799.00"
+CSV;
+        self::assertStringContainsString($expected, $csv->toString());
     }
 }

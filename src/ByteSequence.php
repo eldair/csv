@@ -4,6 +4,9 @@ namespace Eldair\Csv;
 
 /**
  * Defines constants for common BOM sequences.
+ *
+ * @deprecated since version 9.16.0
+ * @see Bom
  */
 interface ByteSequence
 {

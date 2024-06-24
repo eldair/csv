@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Eldair\Csv;
 
+use Eldair\Csv\Query\QueryException;
 use OutOfBoundsException;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 use SplTempFileObject;
+
 use function array_reverse;
 use function in_array;
 use function strcmp;
@@ -56,7 +58,7 @@ final class StatementTest extends TestCase
     {
         self::assertContains(
             ['jane', 'doe', 'jane.doe@example.com'],
-            $this->stmt->offset(1)->process($this->csv)
+            [...$this->stmt->offset(1)->process($this->csv)]
         );
     }
 
@@ -77,12 +79,12 @@ final class StatementTest extends TestCase
     {
         self::assertContains(
             ['jane', 'doe', 'jane.doe@example.com'],
-            $this->stmt
+            [...$this->stmt
                 ->offset($offset)
                 ->limit($limit)
                 ->where(fn (array $record): bool => true)
                 ->where(fn (array $record): bool => [] !== $record)
-                ->process($this->csv)
+                ->process($this->csv)]
         );
     }
 
@@ -117,21 +119,115 @@ final class StatementTest extends TestCase
         self::assertEquals($result3, $result2);
     }
 
+    public function testAddWhere(): void
+    {
+        $stmt1 = Statement::create()->andWhere(0, '=', 'jane');
+        $result1 = $stmt1->process($this->csv);
+
+        self::assertCount(1, $result1);
+        self::assertEquals('jane', $result1->first()[0]);
+
+        $stmt2 = Statement::create()->andWhere(0, 'starts_with', 'j');
+        $result2 = $stmt2->process($this->csv);
+
+        self::assertCount(2, $result2);
+        self::assertEquals('jane', $result2->nth(1)[0]);
+
+        $stmt3 = Statement::create()->andWhere(2, 'starts_with', 'blablabla');
+        $result3 = $stmt3->process($this->csv);
+
+        self::assertCount(0, $result3);
+    }
+
+    public function testOrWhere(): void
+    {
+        $stmt1 = Statement::create()
+            ->orWhere(0, 'starts_with', 'ja')
+            ->orWhere(0, 'ends_with', 'hn');
+        $result1 = $stmt1->process($this->csv);
+
+        self::assertCount(2, $result1);
+        self::assertEquals('john', $result1->first()[0]);
+
+        $stmt3 = Statement::create()->orWhere(2, 'starts_with', 'blablabla');
+        $result3 = $stmt3->process($this->csv);
+
+        self::assertCount(0, $result3);
+    }
+
     public function testOrderBy(): void
     {
         $calculated = $this->stmt
-            ->orderBy(fn (array $rowA, array $rowB): int => strcmp($rowA[0], $rowB[0]))
+            ->orderBy(fn (array $rowA, array $rowB): int => strcmp($rowA[0], $rowB[0])) /* @phpstan-ignore-line */
             ->process($this->csv);
 
         self::assertSame(array_reverse($this->expected), array_values([...$calculated]));
     }
 
-    public function testOrderByWithEquity(): void
+    public function testOrderByColumn(): void
     {
         $calculated = $this->stmt
-            ->orderBy(fn (array $rowA, array $rowB): int => strlen($rowA[0]) <=> strlen($rowB[0]))
+            ->orderByAsc(0)
+            ->process($this->csv);
+
+        self::assertSame(array_reverse($this->expected), array_values([...$calculated]));
+
+        $calculated = $this->stmt
+            ->orderByDesc(0)
             ->process($this->csv);
 
         self::assertSame($this->expected, array_values([...$calculated]));
+    }
+
+    public function testOrderByColumnThrowsExceptionIfTheOffsetDoesNotExists(): void
+    {
+        $this->expectException(QueryException::class);
+
+        $this->stmt->orderByDesc(-42)->process($this->csv);
+    }
+
+    public function testOrderByWithEquity(): void
+    {
+        $calculated = $this->stmt
+            ->orderBy(fn (array $rowA, array $rowB): int => strlen($rowA[0]) <=> strlen($rowB[0])) /* @phpstan-ignore-line */
+            ->process($this->csv);
+
+        self::assertSame($this->expected, array_values([...$calculated]));
+    }
+
+    public function testHeaderMapperOnStatement(): void
+    {
+        $results = Statement::create()
+            ->process($this->csv, [2 => 'e-mail', 1 => 'lastname', 33 => 'does not exists']);
+        self::assertSame(['e-mail', 'lastname', 'does not exists'], $results->getHeader());
+        self::assertSame([
+            'e-mail' => 'john.doe@example.com',
+            'lastname' => 'doe',
+            'does not exists' => null,
+        ], $results->first());
+    }
+
+    public function testOrderByDoesNotThrowOnInvalidOffsetOrLimit(): void
+    {
+        $document = <<<CSV
+Integer,Float,Text,Multiline Text,Date and Time
+1,1.11,Foo,"Foo
+Bar",2020-01-01 01:01:01
+2,1.22,Bar,"Bar
+Baz",2020-02-02 02:02:02
+3,1.33,Baz,"Baz
+Foo",2020-03-03 03:03:03
+CSV;
+
+        $csv = Reader::createFromString($document);
+        $csv->setHeaderOffset(0);
+        $constraints = Statement::create()
+            ->select('Integer', 'Text', 'Date and Time')
+            ->where(fn (array $record): bool => (float) $record['Float'] < 1.3)
+            ->orderBy(fn (array $record1, array $record2): int => (int) $record2['Integer'] <=> (int) $record1['Integer']) /* @phpstan-ignore-line */
+            ->limit(5)
+            ->offset(2);
+
+        self::assertSame([], $constraints->process($csv)->nth(42));
     }
 }

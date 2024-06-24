@@ -6,6 +6,7 @@ namespace Eldair\Csv;
 
 use PhpBench\Attributes as Bench;
 use SplFileObject;
+
 use function assert;
 
 final class ReaderBench

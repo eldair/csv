@@ -4,18 +4,17 @@ declare(strict_types=1);
 
 namespace Eldair\Csv;
 
-use Generator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
-use PHPUnit\Framework\TestCase;
 use SplTempFileObject;
+
 use function current;
 use function in_array;
 use function json_encode;
 use function next;
 
 #[Group('reader')]
-final class ResultSetTest extends TestCase
+final class ResultSetTest extends TabularDataReaderTestCase
 {
     private Reader $csv;
     private Statement $stmt;
@@ -40,11 +39,29 @@ final class ResultSetTest extends TestCase
         unset($this->csv, $this->stmt);
     }
 
-    public function testCountable(): void
+    protected function tabularData(): TabularDataReader
     {
-        $records = $this->stmt->limit(1)->process($this->csv);
-        self::assertCount(1, $records);
-        self::assertInstanceOf(Generator::class, $records->getIterator());
+        return new ResultSet([
+            ['date', 'temperature', 'place'],
+            ['2011-01-01', '1', 'Galway'],
+            ['2011-01-02', '-1', 'Galway'],
+            ['2011-01-03', '0', 'Galway'],
+            ['2011-01-01', '6', 'Berkeley'],
+            ['2011-01-02', '8', 'Berkeley'],
+            ['2011-01-03', '5', 'Berkeley'],
+        ]);
+    }
+
+    protected function tabularDataWithHeader(): TabularDataReader
+    {
+        return new ResultSet([
+            ['2011-01-01', '1', 'Galway'],
+            ['2011-01-02', '-1', 'Galway'],
+            ['2011-01-03', '0', 'Galway'],
+            ['2011-01-01', '6', 'Berkeley'],
+            ['2011-01-02', '8', 'Berkeley'],
+            ['2011-01-03', '5', 'Berkeley'],
+        ], ['date', 'temperature', 'place']);
     }
 
     public function testFilter(): void
@@ -54,11 +71,22 @@ final class ResultSetTest extends TestCase
         $stmt = Statement::create(fn (array $row): bool => !in_array('jane', $row, true));
 
         $result1 = $stmt->process($this->csv);
-        $result2 = $stmt->where($func2)->process($result1, ['foo', 'bar']);
-        $result3 = $stmt->where($func2)->process($result2, ['foo', 'bar']);
+        $result2 = $stmt->where($func2)->process($result1);
+        $result3 = $stmt->where($func2)->process($result2);
 
         self::assertNotContains(['jane', 'doe', 'jane.doe@example.com'], [...$result1]);
+        self::assertCount(0, $result2);
+        self::assertEquals($result3, $result2);
+    }
 
+    public function testFilterWithClassFilterMethod(): void
+    {
+        $func2 = fn (array $row): bool => !in_array('john', $row, true);
+        $result1 = $this->csv->filter(fn (array $row): bool => !in_array('jane', $row, true));
+        $result2 = $result1->filter($func2);
+        $result3 = $result2->filter($func2);
+
+        self::assertNotContains(['jane', 'doe', 'jane.doe@example.com'], [...$result1]);
         self::assertCount(0, $result2);
         self::assertEquals($result3, $result2);
     }
@@ -97,8 +125,8 @@ final class ResultSetTest extends TestCase
 
     public function testFetchColumn(): void
     {
-        self::assertContains('john', $this->stmt->process($this->csv)->fetchColumnByOffset(0));
-        self::assertContains('jane', $this->stmt->process($this->csv)->fetchColumnByOffset(0));
+        self::assertContains('john', [...$this->stmt->process($this->csv)->fetchColumnByOffset(0)]);
+        self::assertContains('jane', [...$this->stmt->process($this->csv)->fetchColumnByOffset(0)]);
     }
 
     public function testFetchColumnByNameTriggersException(): void
@@ -150,12 +178,12 @@ final class ResultSetTest extends TestCase
 
     public function testFetchColumnWithColumnName(): void
     {
-        $source = Reader::BOM_UTF8.'"parent name","child name","title"
+        $source = Bom::Utf8->value.'"parent name","child name","title"
             "parentA","childA","titleA"';
         $csv = Reader::createFromString($source);
         $csv->setHeaderOffset(0);
 
-        self::assertContains('parentA', $this->stmt->process($csv)->fetchColumnByName('parent name'));
+        self::assertContains('parentA', [...$this->stmt->process($csv)->fetchColumnByName('parent name')]);
     }
 
     public function testFetchColumnInconsistentColumnCSV(): void
@@ -219,16 +247,16 @@ final class ResultSetTest extends TestCase
     {
         return [
             'default values' => [
-                'key' => 0,
-                'value' => 1,
+                'index' => 0,
+                'item' => 1,
                 'expected' => [
                     ['john' => 'doe'],
                     ['jane' => 'doe'],
                 ],
             ],
             'changed key order' => [
-                'key' => 1,
-                'value' => 0,
+                'index' => 1,
+                'item' => 0,
                 'expected' => [
                     ['doe' => 'john'],
                     ['doe' => 'jane'],
@@ -310,6 +338,87 @@ final class ResultSetTest extends TestCase
         );
         $csv->setDelimiter(',');
         $resultSet = Statement::create()->process($csv);
-        Statement::create()->process($resultSet, ['foo', 3]);
+        Statement::create()->process($resultSet, ['foo', 3]); /* @phpstan-ignore-line */
+    }
+
+    public function testOrderBy(): void
+    {
+        $calculated = Statement::create()->process($this->csv)->sorted(fn (array $rowA, array $rowB): int => strcmp($rowA[0], $rowB[0]));
+
+        self::assertSame(array_reverse($this->expected), array_values([...$calculated]));
+    }
+
+    public function testOrderByWithEquity(): void
+    {
+        $calculated = Statement::create()->process($this->csv)->sorted(fn (array $rowA, array $rowB): int => strlen($rowA[0]) <=> strlen($rowB[0]));
+
+        self::assertSame($this->expected, array_values([...$calculated]));
+    }
+
+    public function testHeaderMapperOnResultSet(): void
+    {
+        $results = Statement::create()
+            ->process($this->csv)
+            ->getRecords([2 => 'e-mail', 1 => 'lastname', 33 => 'does not exists']);
+
+        self::assertSame([
+            'e-mail' => 'john.doe@example.com',
+            'lastname' => 'doe',
+            'does not exists' => null,
+        ], [...$results][0]);
+    }
+
+    public function testHeaderMapperOnResultSetAlwaysUsesTheColumnOffset(): void
+    {
+        $csv = <<<CSV
+firstname,lastname,e-mail
+john,doe,john.doe@example.com
+jane,doe,jane.doe@example.com
+CSV;
+        $reader = Reader::createFromString($csv)
+            ->setHeaderOffset(0);
+
+        $resultSet = Statement::create()->process($reader);
+
+        self::assertSame(
+            ['nom de famille' => 'doe', 'prenom' => 'john', 'e-mail' => 'john.doe@example.com'],
+            [...$resultSet->getRecords([1 => 'nom de famille', 0 => 'prenom', 2 => 'e-mail'])][0]
+        );
+    }
+
+    public function testHeaderMapperOnResultSetAlwaysIgnoreTheColumnName(): void
+    {
+        $csv = <<<CSV
+firstname,lastname,e-mail
+john,doe,john.doe@example.com
+jane,doe,jane.doe@example.com
+CSV;
+        $reader = Reader::createFromString($csv)
+            ->setHeaderOffset(0);
+        $this->expectException(SyntaxError::class);
+
+        [...Statement::create()
+            ->process($reader)
+            ->getRecords(['lastname' => 'nom de famille', 'firstname' => 'prenom', 'e-mail' => 'e-mail'])];
+    }
+
+    public function testChunkByIssue524(): void
+    {
+        $csv = <<<CSV
+firstname,lastname,e-mail
+john,doe,john.doe@example.com
+jane,doe,jane.doe@example.com
+jose,doe,jose.doe@example.com
+jeny,doe,jeny.doe@example.com
+jack,doe,jack.doe@example.com
+CSV;
+        $reader = Reader::createFromString($csv)->setHeaderOffset(0);
+
+        $total = [];
+        foreach ($reader->chunkBy(2) as $row) {
+            $total[] = count($row);
+        }
+
+        self::assertSame([2, 2, 1], $total);
     }
 }

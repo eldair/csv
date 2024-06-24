@@ -6,9 +6,9 @@ namespace Eldair\Csv;
 
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
-use PHPUnit\Framework\TestCase;
 use SplFileObject;
 use SplTempFileObject;
+
 use function array_keys;
 use function count;
 use function fclose;
@@ -18,7 +18,7 @@ use function json_encode;
 use function unlink;
 
 #[Group('reader')]
-final class ReaderTest extends TestCase
+final class ReaderTest extends TabularDataReaderTestCase
 {
     private Reader $csv;
     private array $expected = [
@@ -41,14 +41,34 @@ final class ReaderTest extends TestCase
         unset($this->csv);
     }
 
-    public function testCountable(): void
+    protected function tabularData(): TabularDataReader
     {
-        $source = '"parent name","child name","title"
-            "parentA","childA","titleA"';
-        $csv = Reader::createFromString($source);
-        self::assertCount(2, $csv);
-        $csv->setHeaderOffset(0);
-        self::assertCount(1, $csv);
+        $csv = <<<CSV
+date,temperature,place
+2011-01-01,1,Galway
+2011-01-02,-1,Galway
+2011-01-03,0,Galway
+2011-01-01,6,Berkeley
+2011-01-02,8,Berkeley
+2011-01-03,5,Berkeley
+CSV;
+
+        return Reader::createFromString($csv);
+    }
+
+    protected function tabularDataWithHeader(): TabularDataReader
+    {
+        $csv = <<<CSV
+date,temperature,place
+2011-01-01,1,Galway
+2011-01-02,-1,Galway
+2011-01-03,0,Galway
+2011-01-01,6,Berkeley
+2011-01-02,8,Berkeley
+2011-01-03,5,Berkeley
+CSV;
+
+        return Reader::createFromString($csv)->setHeaderOffset(0);
     }
 
     public function testReaderWithEmptyEscapeChar1(): void
@@ -176,7 +196,7 @@ EOF;
     {
         $this->expectException(SyntaxError::class);
 
-        [...$this->csv->getRecords(['field1', 2, 'field3'])];
+        [...$this->csv->getRecords(['field1', 2, 'field3'])]; /* @phpstan-ignore-line */
     }
 
     #[DataProvider('validBOMSequences')]
@@ -187,7 +207,7 @@ EOF;
         fputcsv($fp, $record);
         $csv = Reader::createFromStream($fp);
         self::assertSame($expected_bom, $csv->getInputBOM());
-        foreach ($csv as $offset => $row) {
+        foreach ($csv as $row) {
             self::assertSame($expected, $row[0]);
         }
         $csv = null;
@@ -199,14 +219,14 @@ EOF;
     {
         return [
             'withBOM' => [
-                [Reader::BOM_UTF16_LE.'john', 'doe', 'john.doe@example.com'],
-                Reader::BOM_UTF16_LE,
+                [Bom::Utf16Le->value.'john', 'doe', 'john.doe@example.com'],
+                Bom::Utf16Le->value,
                 'john',
             ],
             'withDoubleBOM' =>  [
-                [Reader::BOM_UTF16_LE.Reader::BOM_UTF16_LE.'john', 'doe', 'john.doe@example.com'],
-                Reader::BOM_UTF16_LE,
-                Reader::BOM_UTF16_LE.'john',
+                [Bom::Utf16Le->value.Bom::Utf16Le->value.'john', 'doe', 'john.doe@example.com'],
+                Bom::Utf16Le->value,
+                Bom::Utf16Le->value.'john',
             ],
             'withoutBOM' => [
                 ['john', 'doe', 'john.doe@example.com'],
@@ -218,12 +238,12 @@ EOF;
 
     public function testStripBOMWithEnclosure(): void
     {
-        $source = Reader::BOM_UTF8.'"parent name","child name","title"
+        $source = Bom::Utf8->value.'"parent name","child name","title"
             "parentA","childA","titleA"';
         $csv = Reader::createFromString($source);
         $csv->setHeaderOffset(0);
         $expected = ['parent name' => 'parentA', 'child name' => 'childA', 'title' => 'titleA'];
-        foreach ($csv->getRecords() as $offset => $record) {
+        foreach ($csv->getRecords() as $record) {
             self::assertSame($expected, $record);
         }
     }
@@ -242,13 +262,13 @@ EOF;
 
     public function testDisablingBOMStripping(): void
     {
-        $expected_record = [Reader::BOM_UTF16_LE.'john', 'doe', 'john.doe@example.com'];
+        $expected_record = [Bom::Utf16Le->value.'john', 'doe', 'john.doe@example.com'];
         /** @var resource $fp */
         $fp = fopen('php://temp', 'r+');
         fputcsv($fp, $expected_record);
         $csv = Reader::createFromStream($fp);
         $csv->includeInputBOM();
-        self::assertSame(Reader::BOM_UTF16_LE, $csv->getInputBOM());
+        self::assertSame(Bom::Utf16Le->value, $csv->getInputBOM());
         foreach ($csv as $offset => $record) {
             self::assertSame($expected_record, $record);
         }
@@ -321,8 +341,7 @@ EOF;
     public function testMapRecordsFields(): void
     {
         $keys = ['firstname', 'lastname', 'email'];
-        $res = $this->csv->getRecords($keys);
-        foreach ($res as $record) {
+        foreach ($this->csv->getRecords($keys) as $record) {
             self::assertSame($keys, array_keys($record));
         }
     }
@@ -455,7 +474,7 @@ EOF;
 
     public function testRemovingEmptyRecordsWhenBOMStringIsPresent(): void
     {
-        $bom = Reader::BOM_UTF8;
+        $bom = Bom::Utf8->value;
         $text = <<<CSV
 $bom
 column 1,column 2,column 3
@@ -510,7 +529,7 @@ CSV;
 
     public function testGetHeaderThrowsIfTheFirstRecordOnlyContainsBOMString(): void
     {
-        $bom = Reader::BOM_UTF8;
+        $bom = Bom::Utf8->value;
         $text = <<<CSV
 $bom
 column 1,column 2,column 3
@@ -523,21 +542,87 @@ CSV;
         $csv->getHeader();
     }
 
-    public function testSetHeaderFormatterRules(): void
+    public function testOrderBy(): void
     {
-        $text = <<<CSV
-column 1,column 2,column 3
-cell11,cell12,cell13
+        $calculated = $this->csv->sorted(fn (array $rowA, array $rowB): int => strcmp($rowA[0], $rowB[0])); /* @phpstan-ignore-line */
+
+        self::assertSame(array_reverse($this->expected), array_values([...$calculated]));
+    }
+
+    public function testOrderByWithEquity(): void
+    {
+        $calculated = $this->csv->sorted(fn (array $rowA, array $rowB): int => strlen($rowA[0]) <=> strlen($rowB[0])); /* @phpstan-ignore-line */
+
+        self::assertSame($this->expected, array_values([...$calculated]));
+    }
+
+    public function testReaderFormatterUsesOffset(): void
+    {
+        $csv = <<<CSV
+FirstName,LastName,Year
+John,Doe,2001
+Jane,Doe,2005
 CSV;
-        $csv = Reader::createFromString($text);
-        $csv->setHeaderOffset(0);
-        $csv->setHeaderFormatter(fn (array $row): array => array_map('strtoupper', $row));
+
+        $reader = Reader::createFromString($csv);
+        $reader->setHeaderOffset(0);
         self::assertSame([
-            1 => [
-                'COLUMN 1' => 'cell11',
-                'COLUMN 2' => 'cell12',
-                'COLUMN 3' => 'cell13',
+            [
+                'FirstName' => 'John',
+                'LastName' => 'Doe',
+                'Year' => '2001',
             ],
-        ], iterator_to_array($csv, true));
+            [
+                'FirstName' => 'Jane',
+                'LastName' => 'Doe',
+                'Year' => '2005',
+            ],
+        ], [...$reader]);
+
+        $reader->addFormatter(function (array $record): array {
+            $record['Year'] = (int) $record['Year'];
+
+            return $record;
+        });
+
+        self::assertSame([
+            [
+                'FirstName' => 'John',
+                'LastName' => 'Doe',
+                'Year' =>  2001,
+            ],
+            [
+                'FirstName' => 'Jane',
+                'LastName' => 'Doe',
+                'Year' => 2005,
+            ],
+        ], [...$reader]);
+    }
+
+    public function testHeaderMapper(): void
+    {
+        $csv = <<<CSV
+Abel,14,M,2004
+Abiga,6,F,2004
+Aboubacar,8,M,2004
+Aboubakar,6,M,2004
+CSV;
+        $firstRow = [...Reader::createFromString($csv)
+            ->getRecords([3 => 'Year', 0 => 'Firstname', 1 => 'Count'])][0];
+        self::assertSame(['Year' => '2004', 'Firstname' => 'Abel', 'Count' => '14'], $firstRow);
+    }
+
+    public function testHeaderMapperFailsWithInvalidMapper(): void
+    {
+        $csv = <<<CSV
+Abel,14,M,2004
+Abiga,6,F,2004
+Aboubacar,8,M,2004
+Aboubakar,6,M,2004
+CSV;
+        $this->expectException(SyntaxError::class);
+
+        Reader::createFromString($csv)
+            ->getRecords(['Annee' => 'Year', 'Prenom' => 'Firstname', 'Nombre' => 'Count']);
     }
 }
