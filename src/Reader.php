@@ -51,7 +51,6 @@ class Reader extends AbstractCsv implements TabularDataReader, JsonSerializable
     public function setHeaderFormatter(callable $formatter): self
     {
         $this->header_formatter = !$formatter instanceof Closure ? $formatter(...) : $formatter;
-        ;
 
         return $this;
     }
