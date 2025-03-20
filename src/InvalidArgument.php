@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Eldair\Csv;
 
+use Deprecated;
 use Throwable;
 
 /**

@@ -102,8 +102,7 @@ final class RFC4180FieldTest extends TestCase
     public static function wrongParamProvider(): array
     {
         return [
-            'empty array' => [[
-            ]],
+            'empty array' => [[]],
             'wrong escape' => [[
                 'enclosure' => '"',
                 'escape' => 'foo',

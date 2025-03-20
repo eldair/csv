@@ -2,18 +2,7 @@
 
 use PhpCsFixer\Runner\Parallel\ParallelConfigFactory;
 
-$header = <<<EOF
-CSV
-
-(c)
-
-For the full copyright and license information, please view the LICENSE
-file that was distributed with this source code.
-EOF;
-
-$finder = PhpCsFixer\Finder::create()
-    ->in(__DIR__ . '/src')
-;
+$finder = PhpCsFixer\Finder::create()->in(__DIR__ . '/src');
 
 $config = new PhpCsFixer\Config();
 
@@ -23,12 +12,6 @@ return $config
         '@PSR12' => true,
         'array_syntax' => ['syntax' => 'short'],
         'concat_space' => ['spacing' => 'none'],
-        // 'header_comment' => [
-        //     'comment_type' => 'PHPDoc',
-        //     'header' => $header,
-        //     'location' => 'after_open',
-        //     'separate' => 'both',
-        // ],
         'global_namespace_import' => [
             'import_classes' => true,
             'import_constants' => true,

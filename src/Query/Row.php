@@ -115,9 +115,7 @@ final class Row
                 continue;
             }
 
-            if (is_int($key)) {
-                throw QueryException::dueToUnknownColumn($key, $row);
-            }
+            !is_int($key) || throw QueryException::dueToUnknownColumn($key, $row);
 
             if ($object->hasProperty($key) && $object->getProperty($key)->isPublic()) {
                 $res[$key] = $object->getProperty($key)->getValue($row);
@@ -130,7 +128,8 @@ final class Row
             }
             $methodNameList[] = self::camelCase($key, 'get');
             foreach ($methodNameList as $methodName) {
-                if ($object->hasMethod($methodName)
+                if (
+                    $object->hasMethod($methodName)
                     && $object->getMethod($methodName)->isPublic()
                     && 1 > $object->getMethod($methodName)->getNumberOfRequiredParameters()
                 ) {

@@ -8,7 +8,6 @@ use ArrayIterator;
 use CallbackFilterIterator;
 use Eldair\Csv\Query\QueryTestCase;
 use Eldair\Csv\Query\Row;
-
 use PHPUnit\Framework\Attributes\Test;
 
 use const ARRAY_FILTER_USE_BOTH;
@@ -82,9 +81,9 @@ final class CriteriaTest extends QueryTestCase
         ], iterator_to_array(new CallbackFilterIterator($data, Criteria::any($predicate1, $predicate2)->not())));
 
         self::assertSame([
-           1 => ['volume' => 86, 'edition' => 1],
-           3 => ['volume' => 98, 'edition' => 2],
-           5 => ['volume' => 67, 'edition' => 7],
+            1 => ['volume' => 86, 'edition' => 1],
+            3 => ['volume' => 98, 'edition' => 2],
+            5 => ['volume' => 67, 'edition' => 7],
         ], iterator_to_array(new CallbackFilterIterator($data, Criteria::xany($predicate1, $predicate2)->not()), true));
     }
 }

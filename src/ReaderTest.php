@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Eldair\Csv;
 
 use PHPUnit\Framework\Attributes\DataProvider;
+use PHPUnit\Framework\Attributes\DoesNotPerformAssertions;
 use PHPUnit\Framework\Attributes\Group;
 use SplFileObject;
 use SplTempFileObject;
@@ -29,8 +30,9 @@ final class ReaderTest extends TabularDataReaderTestCase
     protected function setUp(): void
     {
         $tmp = new SplTempFileObject();
+        $tmp->setCsvControl(escape: '\\');
         foreach ($this->expected as $row) {
-            $tmp->fputcsv($row);
+            $tmp->fputcsv($row, escape: '\\');
         }
 
         $this->csv = Reader::createFromFileObject($tmp);
@@ -41,7 +43,7 @@ final class ReaderTest extends TabularDataReaderTestCase
         unset($this->csv);
     }
 
-    protected function tabularData(): TabularDataReader
+    protected function tabularDataWithoutHeader(): TabularDataReader
     {
         $csv = <<<CSV
 date,temperature,place
@@ -147,16 +149,17 @@ EOF;
         ];
 
         $file = new SplTempFileObject();
+        $file->setCsvControl(escape: '\\');
         foreach ($raw as $row) {
-            $file->fputcsv($row);
+            $file->fputcsv($row, escape: '\\');
         }
         $csv = Reader::createFromFileObject($file);
         $csv->setHeaderOffset(0);
 
-        $res = Statement::create()->process($csv);
+        $res = (new Statement())->process($csv);
         self::assertEquals($csv->nth(3), $res->nth(3));
-        self::assertEquals($csv->fetchColumnByName('firstname'), $res->fetchColumnByName('firstname'));
-        self::assertEquals($csv->fetchColumnByOffset(1), $res->fetchColumnByOffset(1));
+        self::assertEquals($csv->fetchColumn('firstname'), $res->fetchColumn('firstname'));
+        self::assertEquals($csv->fetchColumn(1), $res->fetchColumn(1));
         self::assertEquals($csv->fetchPairs('lastname', 0), $res->fetchPairs('lastname', 0));
     }
 
@@ -204,7 +207,7 @@ EOF;
     {
         /** @var resource $fp */
         $fp = fopen('php://temp', 'r+');
-        fputcsv($fp, $record);
+        fputcsv($fp, $record, escape: '');
         $csv = Reader::createFromStream($fp);
         self::assertSame($expected_bom, $csv->getInputBOM());
         foreach ($csv as $row) {
@@ -265,7 +268,7 @@ EOF;
         $expected_record = [Bom::Utf16Le->value.'john', 'doe', 'john.doe@example.com'];
         /** @var resource $fp */
         $fp = fopen('php://temp', 'r+');
-        fputcsv($fp, $expected_record);
+        fputcsv($fp, $expected_record, escape: '');
         $csv = Reader::createFromStream($fp);
         $csv->includeInputBOM();
         self::assertSame(Bom::Utf16Le->value, $csv->getInputBOM());
@@ -324,7 +327,7 @@ EOF;
         /** @var resource $tmp */
         $tmp = fopen('php://temp', 'r+');
         foreach ($this->expected as $row) {
-            fputcsv($tmp, $row);
+            fputcsv($tmp, $row, escape: '');
         }
 
         $csv = Reader::createFromStream($tmp);
@@ -354,8 +357,9 @@ EOF;
         ];
 
         $tmp = new SplTempFileObject();
+        $tmp->setCsvControl(escape: '\\');
         foreach ($expected as $row) {
-            $tmp->fputcsv($row);
+            $tmp->fputcsv($row, escape: '\\');
         }
 
         $reader = Reader::createFromFileObject($tmp)->setHeaderOffset(0);
@@ -470,6 +474,24 @@ EOF;
                 $expected_with_preserving_with_header,
             ],
         ];
+    }
+
+    public function testSetHeaderFormatterRules(): void
+    {
+        $text = <<<CSV
+ column 1,column 2,column 3
+ cell11,cell12,cell13
+ CSV;
+        $csv = Reader::createFromString($text);
+        $csv->setHeaderOffset(0);
+        $csv->setHeaderFormatter(fn (array $row): array => array_map('strtoupper', $row));
+        self::assertSame([
+            1 => [
+                'COLUMN 1' => 'cell11',
+                'COLUMN 2' => 'cell12',
+                'COLUMN 3' => 'cell13',
+            ],
+        ], iterator_to_array($csv, true));
     }
 
     public function testRemovingEmptyRecordsWhenBOMStringIsPresent(): void
@@ -624,5 +646,19 @@ CSV;
 
         Reader::createFromString($csv)
             ->getRecords(['Annee' => 'Year', 'Prenom' => 'Firstname', 'Nombre' => 'Count']);
+    }
+
+    #[DoesNotPerformAssertions]
+    public function testStreamWithFiltersDestructsGracefully(): void
+    {
+        /** @var resource $fp */
+        $fp = fopen('php://temp', 'r+');
+        fputcsv($fp, ['abc', '123'], escape: '');
+
+        $csv = Reader::createFromStream($fp);
+        $csv->appendStreamFilterOnRead('convert.iconv.UTF-8/UTF-16');
+
+        // An explicitly closed file handle makes the stream filter resources invalid
+        fclose($fp);
     }
 }

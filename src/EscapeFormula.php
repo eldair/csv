@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Eldair\Csv;
 
+use Deprecated;
 use InvalidArgumentException;
 use Stringable;
 
@@ -49,9 +50,7 @@ class EscapeFormula
     protected function filterSpecialCharacters(string ...$characters): array
     {
         foreach ($characters as $str) {
-            if (1 !== strlen($str)) {
-                throw new InvalidArgumentException('The submitted string '.$str.' must be a single character');
-            }
+            1 === strlen($str) || throw new InvalidArgumentException('The submitted string '.$str.' must be a single character');
         }
 
         return $characters;
@@ -144,6 +143,7 @@ class EscapeFormula
      *
      * @see escapeRecord
      */
+    #[Deprecated(message: 'use Eldair\Csv\EscapeFormula::escapeRecord() instead', since: 'league/csv:9.11.0')]
     public function __invoke(array $record): array
     {
         return $this->escapeRecord($record);

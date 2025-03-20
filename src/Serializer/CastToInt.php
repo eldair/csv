@@ -22,15 +22,17 @@ final class CastToInt implements TypeCasting
         $this->isNullable = $this->init($reflectionProperty);
     }
 
-    public function setOptions(?int $default = null): void
-    {
+    public function setOptions(
+        ?int $default = null,
+        bool $emptyStringAsNull = false,
+    ): void {
         $this->default = $default;
     }
 
     /**
      * @throws TypeCastingFailed
      */
-    public function toVariable(?string $value): ?int
+    public function toVariable(mixed $value): ?int
     {
         if (null === $value) {
             return match ($this->isNullable) {
@@ -38,6 +40,8 @@ final class CastToInt implements TypeCasting
                 false => throw TypeCastingFailed::dueToNotNullableType('integer'),
             };
         }
+
+        is_scalar($value) || throw TypeCastingFailed::dueToInvalidValue($value, Type::Int->value);
 
         $int = filter_var($value, Type::Int->filterFlag());
 
@@ -65,9 +69,7 @@ final class CastToInt implements TypeCasting
             }
         }
 
-        if (null === $type) {
-            throw throw MappingFailed::dueToTypeCastingUnsupportedType($reflectionProperty, $this, 'int', 'float', 'null', 'mixed');
-        }
+        null !== $type || throw throw MappingFailed::dueToTypeCastingUnsupportedType($reflectionProperty, $this, 'int', 'float', 'null', 'mixed');
 
         return $isNullable;
     }

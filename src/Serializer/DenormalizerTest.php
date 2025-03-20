@@ -9,6 +9,7 @@ use DateTime;
 use DateTimeImmutable;
 use DateTimeInterface;
 use DateTimeZone;
+use Eldair\Csv\Reader;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use SplFileObject;
@@ -92,11 +93,11 @@ final class DenormalizerTest extends TestCase
 
         $foobar = new class (3, Place::Yamoussokro, new DateTimeImmutable()) {
             public function __construct(
-                #[MapCell(column:'temperature')]
+                #[MapCell(column: 'temperature')]
                 public readonly float $temperature,
-                #[MapCell(column:2)]
+                #[MapCell(column: 2)]
                 public readonly Place $place,
-                #[MapCell(column:'date', options: ['format' => '!Y-m-d', 'timezone' => 'Africa/Kinshasa'])]
+                #[MapCell(column: 'date', options: ['format' => '!Y-m-d', 'timezone' => 'Africa/Kinshasa'])]
                 public readonly DateTimeInterface $observedOn
             ) {
             }
@@ -116,14 +117,14 @@ final class DenormalizerTest extends TestCase
             private float $temperature;
 
             public function __construct(
-                #[MapCell(column:2)]
+                #[MapCell(column: 2)]
                 public readonly Place $place,
                 #[MapCell(column: 'date', options: ['format' => '!Y-m-d', 'timezone' => 'Africa/Kinshasa'])]
                 private readonly DateTime $observedOn
             ) {
             }
 
-            #[MapCell(column:'temperature')]
+            #[MapCell(column: 'temperature')]
             public function setTemperature(float $temperature): void
             {
                 $this->temperature = $temperature;
@@ -168,14 +169,14 @@ final class DenormalizerTest extends TestCase
             private float $temperature;
 
             public function __construct(
-                #[MapCell(column:2)]
+                #[MapCell(column: 2)]
                 public readonly Place $place,
                 #[MapCell(column: 'date', options: ['format' => '!Y-m-d', 'timezone' => 'Africa/Kinshasa'])]
                 private readonly DateTime $observedOn
             ) {
             }
 
-            #[MapCell(column:'temperature')]
+            #[MapCell(column: 'temperature')]
             public function setTemperature(float $temperature): void
             {
                 $this->temperature = $temperature;
@@ -209,14 +210,14 @@ final class DenormalizerTest extends TestCase
             private float $temperature;
 
             public function __construct(
-                #[MapCell(column:2)]
+                #[MapCell(column: 2)]
                 public readonly Place $place,
                 #[MapCell(column: 'date', options: ['format' => '!Y-m-d', 'timezone' => 'Africa/Kinshasa'])]
                 private readonly DateTime $observedOn
             ) {
             }
 
-            #[MapCell(column:'temperature')]
+            #[MapCell(column: 'temperature')]
             public function setTemperature(float $temperature): void
             {
                 $this->temperature = $temperature;
@@ -248,9 +249,9 @@ final class DenormalizerTest extends TestCase
     {
         $class = new class (5, Place::Abidjan, new DateTimeImmutable()) {
             public function __construct(
-                #[MapCell(column:'temperature'), MapCell(column:'date')] /* @phpstan-ignore-line */
+                #[MapCell(column: 'temperature'), MapCell(column: 'date')] /* @phpstan-ignore-line */
                 public readonly float $temperature,
-                #[MapCell(column:2)]
+                #[MapCell(column: 2)]
                 public readonly Place $place,
                 #[MapCell(column: 'date', options: ['format' => '!Y-m-d', 'timezone' => 'Africa/Kinshasa'])]
                 public readonly DateTimeInterface $observedOn
@@ -268,9 +269,9 @@ final class DenormalizerTest extends TestCase
     {
         $foobar = new class (5, Place::Yamoussokro, new DateTimeImmutable()) {
             public function __construct(
-                #[MapCell(column:'temperature', cast: stdClass::class)]
+                #[MapCell(column: 'temperature', cast: stdClass::class)]
                 public readonly float $temperature,
-                #[MapCell(column:2)]
+                #[MapCell(column: 2)]
                 public readonly Place $place,
                 #[MapCell(column: 'date', options: ['format' => '!Y-m-d', 'timezone' => 'Africa/Kinshasa'])]
                 public readonly DateTimeInterface $observedOn
@@ -289,9 +290,9 @@ final class DenormalizerTest extends TestCase
         $foobar = new class (3, Place::Abidjan, new DateTimeImmutable()) {
             /* @phpstan-ignore-next-line */
             public function __construct(
-                #[MapCell(cast:CastToFloat::class)]
+                #[MapCell(cast: CastToFloat::class)]
                 public $temperature,
-                #[MapCell(cast:CastToEnum::class, options: ['className' => Place::class])]
+                #[MapCell(cast: CastToEnum::class, options: ['className' => Place::class])]
                 public $place,
                 #[MapCell(cast: CastToDate::class)]
                 public $observedOn
@@ -305,7 +306,6 @@ final class DenormalizerTest extends TestCase
         self::assertSame(1.0, $instance->temperature);
         self::assertSame(Place::Abidjan, $instance->place);
         self::assertEquals(new DateTimeImmutable('2023-10-23'), $instance->observedOn);
-
     }
 
     public function testItWillFailForLackOfTypeCasting(): void
@@ -327,26 +327,62 @@ final class DenormalizerTest extends TestCase
 
     public function testItWillCallAMethodAfterMapping(): void
     {
-        /** @var UsingAfterMapping $res */
-        $res = Denormalizer::assign(UsingAfterMapping::class, ['addition' => '1']);
+        $usingAfterMapping = new #[MapRecord(afterMapping: ['addOne'])] class (23) {
+            public function __construct(public int $addition)
+            {
+                $this->addOne();
+            }
+
+            private function addOne(): void
+            {
+                ++$this->addition;
+            }
+        };
+
+        /** @var object{addition: int} $res */
+        $res = Denormalizer::assign($usingAfterMapping::class, ['addition' => '1']);
 
         self::assertSame(2, $res->addition);
     }
 
     public function testIfFailsToUseAfterMappingWithUnknownMethod(): void
     {
-        $this->expectException(MappingFailed::class);
-        $this->expectExceptionMessage('The method `addTow` is not defined on the `'.MissingMethodAfterMapping::class.'` class.');
+        $missingMethodAfterMapping = new #[MapRecord(afterMapping: ['addOne', 'addTow'])] class (23) {
+            public function __construct(public int $addition)
+            {
+                $this->addOne();
+            }
 
-        Denormalizer::assign(MissingMethodAfterMapping::class, ['addition' => '1']);
+            private function addOne(): void
+            {
+                ++$this->addition;
+            }
+        };
+
+        $this->expectException(MappingFailed::class);
+        $this->expectExceptionMessage('The method `addTow` is not defined on the `'.$missingMethodAfterMapping::class.'` class.');
+
+        Denormalizer::assign($missingMethodAfterMapping::class, ['addition' => '1']);
     }
 
     public function testIfFailsToUseAfterMappingWithInvalidArgument(): void
     {
-        $this->expectException(MappingFailed::class);
-        $this->expectExceptionMessage('The method `'.RequiresArgumentAfterMapping::class.'::addOne` has too many required parameters.');
+        $requiresArgumentAfterMapping = new #[MapRecord(afterMapping: ['addOne'])] class (23) {
+            public function __construct(public int $addition)
+            {
+                $this->addOne(1);
+            }
 
-        Denormalizer::assign(RequiresArgumentAfterMapping::class, ['addition' => '1']);
+            private function addOne(int $add): void
+            {
+                $this->addition += $add;
+            }
+        };
+
+        $this->expectException(MappingFailed::class);
+        $this->expectExceptionMessage('The method `'.$requiresArgumentAfterMapping::class.'::addOne` has too many required parameters.');
+
+        Denormalizer::assign($requiresArgumentAfterMapping::class, ['addition' => '1']);
     }
 
     public function testItWillThrowIfTheClassContainsUninitializedProperties(): void
@@ -442,11 +478,11 @@ final class DenormalizerTest extends TestCase
             public ?string $foo;
         };
 
-        Denormalizer::disallowEmptyStringAsNull();
+        Denormalizer::disallowEmptyStringAsNull(); /* @phpstan-ignore-line */
 
         self::assertSame('', Denormalizer::assign($foobar::class, $record)->foo); /* @phpstan-ignore-line */
 
-        Denormalizer::allowEmptyStringAsNull();
+        Denormalizer::allowEmptyStringAsNull(); /* @phpstan-ignore-line */
 
         self::assertNull(Denormalizer::assign($foobar::class, $record)->foo);
     }
@@ -455,7 +491,8 @@ final class DenormalizerTest extends TestCase
     {
         $class = new class () {
             private ?string $foobar;
-            #[MapCell] /** @phpstan-ignore-line  */
+            #[MapCell]
+            /** @phpstan-ignore-line  */
             public function setFoobar($foobar): void
             {
                 $this->foobar = $foobar;
@@ -585,14 +622,13 @@ final class DenormalizerTest extends TestCase
              * @param ?string $str
              */
             public function __construct(
-                #[MapCell(column:'place', cast: '@lowercase')]
+                #[MapCell(column: 'place', cast: '@lowercase')]
                 public $str
             ) {
             }
         };
 
         $instance = Denormalizer::assign($class::class, ['place' => 'YaMouSSokro']);
-
         self::assertInstanceOf($class::class, $instance);
         self::assertSame('yamoussokro', $instance->str);
     }
@@ -650,10 +686,38 @@ final class DenormalizerTest extends TestCase
     {
         $data = ['foo' => 'bar'];
 
-        $this->expectException(DenormalizationFailed::class);
-        $this->expectExceptionMessage('The property '.MissingProperty::class.'::bar is not initialized; its value is missing from the source data.');
+        $class = new class () {
+            public string $foo;
+            public string $bar;
+        };
 
-        Denormalizer::assign(MissingProperty::class, $data);
+        $this->expectException(DenormalizationFailed::class);
+        $this->expectExceptionMessage('The property '.$class::class.'::bar is not initialized; its value is missing from the source data.');
+
+        Denormalizer::assign($class::class, $data);
+    }
+
+    #[Test]
+    public function it_will_trim_white_space_on_request(): void
+    {
+        $csv = <<<CSV
+id,title,description
+ 23 , foobar  , je suis trop fort
+CSV;
+        $item = new #[MapRecord(trimFieldValueBeforeCasting: true)] class (23, 'foobar', ' je suis trop fort') {
+            public function __construct(
+                public int $id,
+                public string $title,
+                #[MapCell(trimFieldValueBeforeCasting: false)]
+                public string $description,
+            ) {
+            }
+        };
+
+        $document = Reader::createFromString($csv);
+        $document->setHeaderOffset(0);
+
+        self::assertEquals($item, $document->firstAsObject($item::class));
     }
 }
 
@@ -661,55 +725,4 @@ enum Place: string
 {
     case Yamoussokro = 'Yamoussokro';
     case Abidjan = 'Abidjan';
-}
-
-#[AfterMapping('addOne')]
-class UsingAfterMapping
-{
-    public function __construct(public int $addition)
-    {
-        $this->addOne();
-    }
-
-    private function addOne(): void
-    {
-        ++$this->addition;
-    }
-}
-
-#[AfterMapping('addOne', 'addTow')]
-class MissingMethodAfterMapping
-{
-    public function __construct(public int $addition)
-    {
-        $this->addOne();
-    }
-
-    private function addOne(): void
-    {
-        ++$this->addition;
-    }
-}
-
-#[AfterMapping('addOne')]
-class RequiresArgumentAfterMapping
-{
-    public function __construct(public int $addition)
-    {
-        $this->addOne(1);
-    }
-
-    private function addOne(int $add): void
-    {
-        $this->addition += $add;
-    }
-}
-
-class MissingProperty
-{
-    public function __construct(
-        public readonly string $foo,
-        public readonly string $bar,
-    ) {
-    }
 }

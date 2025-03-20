@@ -3,13 +3,24 @@ includes:
     - vendor/phpstan/phpstan-strict-rules/rules.neon
     - vendor/phpstan/phpstan-phpunit/extension.neon
     - vendor/phpstan/phpstan-phpunit/rules.neon
-    - phpstan-baseline.neon
 parameters:
     ignoreErrors:
         - identifier: missingType.generics
         - identifier: missingType.iterableValue
+        - '#implements deprecated interface League\\Csv\\ByteSequence#'
+        - '#Attribute class Deprecated does not exist.#'
+        - '#Parameter \#4 \$params of function stream_filter_(pre|ap)pend expects array, mixed given#'
+        - '#League\\Csv\\HTMLConverter:#'
+        - '#League\\Csv\\XMLConverter:#'
+        - '#Dom\\HTMLElement#'
+        - '#Dom\\XMLDocument#'
+        - '#Dom\\HTMLDocument#'
+        - '#Dom\\Element#'
     level: max
     paths:
         - src
     reportUnmatchedIgnoredErrors: true
     treatPhpDocTypesAsCertain: false
+    parallel:
+        processTimeout: 300.0
+

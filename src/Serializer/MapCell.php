@@ -17,6 +17,8 @@ final class MapCell
         public readonly ?string $cast = null,
         public readonly array $options = [],
         public readonly bool $ignore = false,
+        public readonly ?bool $convertEmptyStringToNull = null,
+        public readonly ?bool $trimFieldValueBeforeCasting = false,
     ) {
     }
 }

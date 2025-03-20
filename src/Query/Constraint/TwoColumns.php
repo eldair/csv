@@ -4,16 +4,14 @@ declare(strict_types=1);
 
 namespace Eldair\Csv\Query\Constraint;
 
-use ArrayIterator;
 use CallbackFilterIterator;
 use Closure;
+use Eldair\Csv\MapIterator;
 use Eldair\Csv\Query\Predicate;
 use Eldair\Csv\Query\QueryException;
 use Eldair\Csv\Query\Row;
 use Iterator;
-use IteratorIterator;
 use ReflectionException;
-use Traversable;
 
 use function array_filter;
 use function is_array;
@@ -38,9 +36,7 @@ final class TwoColumns implements Predicate
         public readonly Comparison|Closure $operator,
         public readonly array|string|int $second,
     ) {
-        if ($this->operator instanceof Closure && is_array($this->second)) {
-            throw new QueryException('The second column must be a string if the operator is a callback.');
-        }
+        !$this->operator instanceof Closure || !is_array($this->second) || throw new QueryException('The second column must be a string if the operator is a callback.');
 
         if (is_array($this->second)) {
             $res = array_filter($this->second, fn (mixed $value): bool => !is_string($value) && !is_int($value));
@@ -55,11 +51,15 @@ final class TwoColumns implements Predicate
      */
     public static function filterOn(
         string|int $firstColumn,
-        Comparison|Closure|string $operator,
+        Comparison|Closure|callable|string $operator,
         array|string|int $secondColumn
     ): self {
         if (is_string($operator)) {
             $operator = Comparison::fromOperator($operator);
+        }
+
+        if (is_callable($operator)) {
+            return new self($firstColumn, Closure::fromCallable($operator), $secondColumn);
         }
 
         return new self($firstColumn, $operator, $secondColumn);
@@ -85,10 +85,6 @@ final class TwoColumns implements Predicate
 
     public function filter(iterable $value): Iterator
     {
-        return new CallbackFilterIterator(match (true) {
-            $value instanceof Iterator => $value,
-            $value instanceof Traversable => new IteratorIterator($value),
-            default => new ArrayIterator($value),
-        }, $this);
+        return new CallbackFilterIterator(MapIterator::toIterator($value), $this);
     }
 }

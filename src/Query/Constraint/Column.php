@@ -4,14 +4,12 @@ declare(strict_types=1);
 
 namespace Eldair\Csv\Query\Constraint;
 
-use ArrayIterator;
 use CallbackFilterIterator;
 use Closure;
+use Eldair\Csv\MapIterator;
 use Eldair\Csv\Query;
 use Iterator;
-use IteratorIterator;
 use ReflectionException;
-use Traversable;
 
 /**
  * Enable filtering a record based on the value of a one of its cell.
@@ -39,11 +37,15 @@ final class Column implements Query\Predicate
      */
     public static function filterOn(
         string|int $column,
-        Comparison|Closure|string $operator,
+        Comparison|Closure|callable|string $operator,
         mixed $value = null,
     ): self {
         if ($operator instanceof Closure) {
             return new self($column, $operator, null);
+        }
+
+        if (is_callable($operator)) {
+            return new self($column, $operator(...), $value);
         }
 
         return new self(
@@ -69,10 +71,6 @@ final class Column implements Query\Predicate
 
     public function filter(iterable $value): Iterator
     {
-        return new CallbackFilterIterator(match (true) {
-            $value instanceof Iterator => $value,
-            $value instanceof Traversable => new IteratorIterator($value),
-            default => new ArrayIterator($value),
-        }, $this);
+        return new CallbackFilterIterator(MapIterator::toIterator($value), $this);
     }
 }

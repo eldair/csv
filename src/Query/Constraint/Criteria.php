@@ -4,15 +4,12 @@ declare(strict_types=1);
 
 namespace Eldair\Csv\Query\Constraint;
 
-use ArrayIterator;
 use CallbackFilterIterator;
 use Closure;
+use Eldair\Csv\MapIterator;
 use Eldair\Csv\Query\Predicate;
 use Eldair\Csv\Query\PredicateCombinator;
 use Iterator;
-use IteratorIterator;
-
-use Traversable;
 
 use function array_reduce;
 
@@ -104,11 +101,7 @@ final class Criteria implements PredicateCombinator
 
     public function filter(iterable $value): Iterator
     {
-        return new CallbackFilterIterator(match (true) {
-            $value instanceof Iterator => $value,
-            $value instanceof Traversable => new IteratorIterator($value),
-            default => new ArrayIterator($value),
-        }, $this);
+        return new CallbackFilterIterator(MapIterator::toIterator($value), $this);
     }
 
     /**
@@ -117,6 +110,11 @@ final class Criteria implements PredicateCombinator
     public function and(Predicate|Closure|callable ...$predicates): self
     {
         return self::all($this->predicate, ...$predicates);
+    }
+
+    public function andNot(Predicate|Closure|callable ...$predicates): self
+    {
+        return self::all($this->predicate, self::none(...$predicates));
     }
 
     /**
@@ -138,8 +136,24 @@ final class Criteria implements PredicateCombinator
     /**
      * @param ConditionExtended ...$predicates
      */
+    public function orNot(Predicate|Closure|callable ...$predicates): self
+    {
+        return self::any($this->predicate, self::none(...$predicates));
+    }
+
+    /**
+     * @param ConditionExtended ...$predicates
+     */
     public function xor(Predicate|Closure|callable ...$predicates): self
     {
         return self::xany($this->predicate, ...$predicates);
+    }
+
+    /**
+     * @param ConditionExtended ...$predicates
+     */
+    public function xorNot(Predicate|Closure|callable ...$predicates): self
+    {
+        return self::xany($this->predicate, self::none(...$predicates));
     }
 }
